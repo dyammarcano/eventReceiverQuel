@@ -18,38 +18,22 @@ const (
 )
 
 type (
+	//azure:
+	//	eventHub:
+	//	eventHub: eventHub
+	//	accountName: accountName
+	//	accountKey: accountKey
+	//	topic: topic
+	//	consumerGroup: consumerGroup
+
 	Config struct {
 		Hostname string `json:"-" mapstructure:"-" yaml:"-"`
-		Azure    Azure  `json:"azure" mapstructure:"azure" yaml:"azure"`
-	}
-
-	Azure struct {
-		EventHub EventHub `json:"eventHub" mapstructure:"eventHub" yaml:"eventHub"`
-		Storage  Storage  `json:"storage" mapstructure:"storage" yaml:"storage"`
-	}
-
-	EventHub struct {
-		NameSpace NameSpace `json:"nameSpace" mapstructure:"nameSpace" yaml:"nameSpace"`
-		Topics    Topics    `json:"topics" mapstructure:"topics" yaml:"topics"`
-	}
-
-	NameSpace struct {
-		GroupID          string `json:"groupID" mapstructure:"groupID" yaml:"groupID"`
-		ConnectionString string `json:"connectionString" mapstructure:"connectionString" yaml:"connectionString"`
-		AccountName      string `json:"accountName" mapstructure:"accountName" yaml:"accountName"`
-		SharedAccessKey  string `json:"sharedAccessKey" mapstructure:"sharedAccessKey" yaml:"sharedAccessKey"`
-		ConsumerGroup    string `json:"consumerGroup" mapstructure:"consumerGroup" yaml:"consumerGroup"`
-	}
-
-	Topics struct {
-		ReceivedFile          string `json:"receivedFile" mapstructure:"receivedFile" yaml:"receivedFile"`
-		Error                 string `json:"error" mapstructure:"error" yaml:"error"`
-		ErrorValidacaoNegocio string `json:"errorValidacaoNegocio" mapstructure:"errorValidacaoNegocio" yaml:"errorValidacaoNegocio"`
-	}
-
-	Storage struct {
-		AccountKey  string `json:"accountKey" mapstructure:"accountKey" yaml:"accountKey"`
-		AccountName string `json:"accountName" mapstructure:"accountName" yaml:"accountName"`
+		EventHub struct {
+			AccountName   string `json:"accountName" mapstructure:"accountName" yaml:"accountName"`
+			AccountKey    string `json:"accountKey" mapstructure:"accountKey" yaml:"accountKey"`
+			Topic         string `json:"topic" mapstructure:"topic" yaml:"topic"`
+			ConsumerGroup string `json:"consumerGroup" mapstructure:"consumerGroup" yaml:"consumerGroup"`
+		} `json:"eventHub" mapstructure:"eventHub" yaml:"eventHub"`
 	}
 )
 
@@ -104,28 +88,16 @@ func (c *Config) isSupportedFileExtension(filePath string) bool {
 }
 
 func (c *Config) Validate() error {
-	{
-		if c.Azure.Storage.AccountName == "" {
-			return errors.New("azure storage account [name] is empty")
-		}
-
-		if c.Azure.Storage.AccountKey == "" {
-			return errors.New("azure storage account [key] is empty")
-		}
+	if c.EventHub.AccountName == "" {
+		return errors.New("event hub account [name] is empty")
 	}
 
-	{
-		if c.Azure.EventHub.NameSpace.AccountName == "" {
-			return errors.New("azure storage account [name] is empty")
-		}
+	if c.EventHub.AccountKey == "" {
+		return errors.New("event hub account [key] is empty")
+	}
 
-		if c.Azure.EventHub.NameSpace.SharedAccessKey == "" {
-			return errors.New("azure storage account [key] is empty")
-		}
-
-		if c.Azure.EventHub.NameSpace.ConnectionString == "" {
-			return errors.New("azure storage account [connection string] is empty")
-		}
+	if c.EventHub.Topic == "" {
+		return errors.New("event hub [topic] is empty")
 	}
 
 	return nil

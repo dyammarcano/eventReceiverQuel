@@ -15,9 +15,7 @@ import (
 )
 
 var (
-	partitionFlag string
-	consumerGroup string
-	strConnFlag   string
+	cfg *config.Config
 )
 
 var rootCmd = &cobra.Command{
@@ -63,35 +61,23 @@ func AddFlag(cmd *cobra.Command, name string, defaultValue any, description stri
 }
 
 func initConfig() {
-	cfg := config.NewConfig()
+	cfg = config.NewConfig()
 
-	err := cfg.LoadConfigFile("C:\\arqprod_local\\cfg\\config.yaml")
+	filePath := viper.GetString("config")
+	if filePath == "" {
+		log.Println("Error config file flag is not present")
+		os.Exit(1)
+	}
+
+	err := cfg.LoadConfigFile(filePath)
 	cobra.CheckErr(err)
 
 	err = cfg.Validate()
 	cobra.CheckErr(err)
 }
 
-func runReceiver(cmd *cobra.Command, args []string) {
-	if strConnFlag == "" {
-		if err := cmd.Help(); err != nil {
-			log.Printf("error printing help: %s", err.Error())
-		}
-		os.Exit(1)
-	}
-
-	// Create a context and a cancel function
-	ctxCancel, cancel := context.WithCancel(context.Background())
-
-	// Create a context with a value
-	ctxValue := context.WithValue(ctxCancel, "azure", event_hub.AzureCredentials{
-		ConnectionString: &strConnFlag,
-		EventHub: event_hub.EventHub{
-			ConsumerGroup: consumerGroup,
-		},
-	})
-
-	clientHub, err := event_hub.NewHubClient(ctxValue)
+func runReceiver(cmd *cobra.Command, _ []string) {
+	clientHub, err := event_hub.NewHubClient(cmd.Context(), cfg)
 	if err != nil {
 		log.Printf("error getting event hub client: %s", err.Error())
 		os.Exit(1)
@@ -106,30 +92,9 @@ func runReceiver(cmd *cobra.Command, args []string) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
-	// partition flag
-	if partitionFlag == "" {
-		chEvent := clientHub.ReceiveEventChannel()
+	chEvent := clientHub.ReceiveEventChannel()
 
-		message(ctxValue)
-
-		go func(chEvent <-chan *eventhub.Event) {
-			for event := range chEvent {
-				log.Printf("event received:\n%s", event.Data)
-			}
-		}(chEvent)
-
-		<-sigCh // Wait for a termination signal
-		log.Println("received termination signal, shutting down gracefully...")
-		os.Exit(0)
-	}
-
-	chEvent, err := clientHub.ReceiveEventChannelPartition(consumerGroup, partitionFlag)
-	if err != nil {
-		log.Printf("error receiving event: %s", err.Error())
-		os.Exit(1)
-	}
-
-	message(ctxValue)
+	message(cfg)
 
 	go func(chEvent <-chan *eventhub.Event) {
 		for event := range chEvent {
@@ -139,20 +104,10 @@ func runReceiver(cmd *cobra.Command, args []string) {
 
 	<-sigCh // Wait for a termination signal
 	log.Println("received termination signal, shutting down gracefully...")
-
-	// Call the cancel function to cancel the context
-	cancel()
+	os.Exit(0)
 }
 
-func message(ctx context.Context) {
-	azureCredentials, ok := ctx.Value("azure").(event_hub.AzureCredentials)
-	if !ok {
-		log.Println("error getting azureConfig from context")
-		os.Exit(1)
-	}
-
-	azure := event_hub.SplicConnectionString(*azureCredentials.ConnectionString)
-
+func message(config *config.Config) {
 	log.Println("receiving events...")
 	fmt.Printf(`
 topic name:    %s
@@ -160,5 +115,5 @@ account name: %s
 
 press CTRL+C to stop receiving events and exit
 
-`, azure.EventHub.TopicName, azure.EventHub.AccountName)
+`, config.EventHub.Topic, config.EventHub.AccountName)
 }
