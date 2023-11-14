@@ -121,8 +121,7 @@ func runReceiver(cmd *cobra.Command, _ []string) {
 func message(config *config.Config) {
 	log.Println("receiving events...")
 	fmt.Printf(`
-topic name:    %s
-account name: %s
+Endpoint=sb://%s.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=*******;EntityPath=%s
 
 press CTRL+C to stop receiving events and exit
 

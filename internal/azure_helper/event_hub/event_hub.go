@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-event-hubs-go/v3"
 	"github.com/dyammarcano/eventReceiverQuel/internal/config"
 	"log"
+	"net"
 	"os"
 	"sync"
 )
@@ -24,7 +25,32 @@ func NewHubClient(ctx context.Context, config *config.Config) (*HubClient, error
 	connStr := fmt.Sprintf("Endpoint=sb://%s.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=%s;EntityPath=%s",
 		config.EventHub.AccountName, config.EventHub.AccountKey, config.EventHub.Topic)
 
+	if err := checkDefaultPorts(config); err != nil {
+		return nil, err
+	}
+
 	return newHubClientSAS(ctx, connStr)
+}
+
+func checkDefaultPorts(cfg *config.Config) error {
+	for _, port := range []int{5671, 5672} {
+		if err := connectionTest(cfg.EventHub.AccountName, port); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func connectionTest(accountName string, port int) error {
+	address := fmt.Sprintf("%s.servicebus.windows.net:%d", accountName, port)
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return fmt.Errorf("port %d is closed, err: %v\n", port, err)
+	}
+
+	defer conn.Close()
+
+	return nil
 }
 
 // newHubClientSAS Get a new client for event hub
@@ -118,7 +144,6 @@ func (h *HubClient) ReceiveEventChannel() (events <-chan *eventhub.Event) {
 			defer wg.Done()
 
 			listenerHandle, err := h.Hub.Receive(h.Context, partitionID, handler, eventhub.ReceiveWithConsumerGroup("$Default"), eventhub.ReceiveWithLatestOffset())
-
 			if err != nil {
 				log.Printf("failed to start listener for partition %s: %v", partitionID, err)
 				os.Exit(1)
