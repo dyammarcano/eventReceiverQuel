@@ -38,6 +38,7 @@ func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	AddFlag(rootCmd, "config", "", "config file")
+	AddFlag(rootCmd, "count", false, "counter messages")
 }
 
 // AddFlag adds a flag to the service manager, it also binds the flag to the viper instance
@@ -96,9 +97,20 @@ func runReceiver(cmd *cobra.Command, _ []string) {
 
 	message(cfg)
 
+	counterBool := viper.GetBool("count")
+
 	go func(chEvent <-chan *eventhub.Event) {
+		counter := 1
+		var msg string
 		for event := range chEvent {
-			log.Printf("event received:\n%s", event.Data)
+			msg = fmt.Sprintf("event received:\n>>\n%s\n<<", event.Data)
+
+			if counterBool {
+				msg = fmt.Sprintf("event counted # %d\n<<", counter)
+				counter++
+			}
+
+			log.Println(msg)
 		}
 	}(chEvent)
 
