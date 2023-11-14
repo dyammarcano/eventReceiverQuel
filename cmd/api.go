@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/dyammarcano/template-go/internal/cmd"
+	"github.com/dyammarcano/eventReceiverQuel/internal/cmd"
 
 	"github.com/spf13/cobra"
 )
