@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/dyammarcano/template-go/cmd"
-	"github.com/dyammarcano/template-go/internal/metadata"
+	"github.com/dyammarcano/eventReceiverQuel/cmd"
+	"github.com/dyammarcano/eventReceiverQuel/internal/metadata"
 )
 
 var (

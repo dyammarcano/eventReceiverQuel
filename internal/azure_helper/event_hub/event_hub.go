@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Azure/azure-event-hubs-go/v3"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -58,7 +60,7 @@ func SplicConnectionString(connectionString string) AzureCredentials {
 func NewHubClient(ctx context.Context) (*HubClient, error) {
 	config, ok := ctx.Value("azure").(AzureCredentials)
 	if !ok {
-		logger.Error("error getting azureConfig from context")
+		log.Println("error getting azureConfig from context")
 		os.Exit(1)
 	}
 
@@ -167,20 +169,20 @@ func (h *HubClient) ReceiveEventChannel() (events <-chan *eventhub.Event) {
 			listenerHandle, err := h.Hub.Receive(h.Context, partitionID, handler, eventhub.ReceiveWithConsumerGroup(consumerGroup), eventhub.ReceiveWithLatestOffset())
 
 			if err != nil {
-				logger.Fatalf("failed to start listener for partition %s: %v", partitionID, err)
+				log.Printf("failed to start listener for partition %s: %v", partitionID, err)
 				os.Exit(1)
 			}
 
 			defer func() {
 				if err := listenerHandle.Close(h.Context); err != nil {
-					logger.Errorf("failed to close listener for partition %s: %v", partitionID, err)
+					log.Printf("failed to close listener for partition %s: %v", partitionID, err)
 				}
 			}()
 
 			for {
 				select {
 				case event := <-listenerHandle.Done():
-					logger.Infof("partition %s listener closed: %v", partitionID, event)
+					log.Printf("partition %s listener closed: %v", partitionID, event)
 				case <-h.Context.Done():
 					return
 				}
@@ -213,20 +215,20 @@ func (h *HubClient) ReceiveEventChannelPartition(consumerGroup, partitionID stri
 		listenerHandle, err := h.Hub.Receive(h.Context, partitionID, handler, eventhub.ReceiveWithConsumerGroup(consumerGroup), eventhub.ReceiveWithLatestOffset())
 
 		if err != nil {
-			logger.Fatalf("failed to start listener for partition %s: %v", partitionID, err)
+			log.Printf("failed to start listener for partition %s: %v", partitionID, err)
 			os.Exit(1)
 		}
 
 		defer func() {
 			if err := listenerHandle.Close(h.Context); err != nil {
-				logger.Errorf("failed to close listener for partition %s: %v", partitionID, err)
+				log.Printf("failed to close listener for partition %s: %v", partitionID, err)
 			}
 		}()
 
 		for {
 			select {
 			case event := <-listenerHandle.Done():
-				logger.Infof("partition %s listener closed: %v", partitionID, event)
+				log.Printf("partition %s listener closed: %v", partitionID, event)
 			case <-h.Context.Done():
 				return
 			}

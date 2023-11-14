@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	eventhub "github.com/Azure/azure-event-hubs-go/v3"
 	"github.com/dyammarcano/eventReceiverQuel/internal/azure_helper/event_hub"
-	"github.com/dyammarcano/eventReceiverQuel/internal/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
@@ -101,7 +101,7 @@ func runReceiver(cmd *cobra.Command, args []string) {
 		}(chEvent)
 
 		<-sigCh // Wait for a termination signal
-		logger.InfoAndStdout("received termination signal, shutting down gracefully...")
+		log.Println("received termination signal, shutting down gracefully...")
 		os.Exit(0)
 	}
 
@@ -120,7 +120,7 @@ func runReceiver(cmd *cobra.Command, args []string) {
 	}(chEvent)
 
 	<-sigCh // Wait for a termination signal
-	logger.InfoAndStdout("received termination signal, shutting down gracefully...")
+	log.Println("received termination signal, shutting down gracefully...")
 
 	// Call the cancel function to cancel the context
 	cancel()
@@ -129,13 +129,12 @@ func runReceiver(cmd *cobra.Command, args []string) {
 func message(ctx context.Context) {
 	config, ok := ctx.Value("azure").(event_hub.AzureCredentials)
 	if !ok {
-		logger.Error("error getting azureConfig from context")
+		log.Println("error getting azureConfig from context")
 		os.Exit(1)
 	}
 
 	azure := event_hub.SplicConnectionString(*config.ConnectionString)
 
-	console.ClearConsole() // clear console
 	log.Println("receiving events...")
 	fmt.Printf(`
 topic name:    %s

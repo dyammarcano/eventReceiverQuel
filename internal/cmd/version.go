@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/dyammarcano/template-go/internal/metadata"
+	"github.com/dyammarcano/eventReceiverQuel/internal/metadata"
 	"github.com/spf13/cobra"
 	"os"
 	"runtime/trace"
