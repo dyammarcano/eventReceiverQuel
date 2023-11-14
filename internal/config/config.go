@@ -10,23 +10,17 @@ import (
 )
 
 const (
-	errEmptyPath            = "config file path cannot be empty"
-	errFileNotFound         = "config file not found in: %s"
-	errUnsupportedExt       = "config file extension not supported: %s"
-	errConfigRead           = "error reading config file: %v"
-	errDecodeStruct         = "unable to decode into struct, %v"
-	defaultMaxFileSize      = 100
-	defaultMaxBackups       = 7
-	defaultMaxAge           = 28
-	defaultCompress         = true
-	defaultThreadsAmount    = 5
-	defaultWorkersAmount    = 5
-	defaultScheduleInterval = 300
+	errEmptyPath      = "config file path cannot be empty"
+	errFileNotFound   = "config file not found in: %s"
+	errUnsupportedExt = "config file extension not supported: %s"
+	errConfigRead     = "error reading config file: %v"
+	errDecodeStruct   = "unable to decode into struct, %v"
 )
 
 type (
 	Config struct {
-		Azure Azure `json:"azure" mapstructure:"azure" yaml:"azure"`
+		Hostname string `json:"-" mapstructure:"-" yaml:"-"`
+		Azure    Azure  `json:"azure" mapstructure:"azure" yaml:"azure"`
 	}
 
 	Azure struct {
@@ -63,11 +57,7 @@ func NewConfig() *Config {
 	return &Config{}
 }
 
-func (s *Config) Config() *Config {
-	return s
-}
-
-func (s *Config) LoadConfigFile(filePath string) error {
+func (c *Config) LoadConfigFile(filePath string) error {
 	if filePath == "" {
 		return errors.New(errEmptyPath)
 	}
@@ -78,7 +68,7 @@ func (s *Config) LoadConfigFile(filePath string) error {
 		return fmt.Errorf(errFileNotFound, fp)
 	}
 
-	if !s.isSupportedFileExtension(fp) {
+	if !c.isSupportedFileExtension(fp) {
 		return fmt.Errorf(errUnsupportedExt, fp)
 	}
 
@@ -89,19 +79,19 @@ func (s *Config) LoadConfigFile(filePath string) error {
 		return fmt.Errorf(errConfigRead, err)
 	}
 
-	if err := viper.Unmarshal(&s); err != nil {
+	if err := viper.Unmarshal(&c); err != nil {
 		return fmt.Errorf(errDecodeStruct, err)
 	}
 
 	// set default values if not defined
-	if err := s.defaultGlobalValue(); err != nil {
+	if err := c.defaultGlobalValue(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (s *Config) isSupportedFileExtension(filePath string) bool {
+func (c *Config) isSupportedFileExtension(filePath string) bool {
 	ext := strings.TrimPrefix(filepath.Ext(filePath), ".")
 
 	for _, supportedExt := range viper.SupportedExts {
@@ -113,27 +103,27 @@ func (s *Config) isSupportedFileExtension(filePath string) bool {
 	return false
 }
 
-func (s *Config) Validate() error {
+func (c *Config) Validate() error {
 	{
-		if s.Azure.Storage.AccountName == "" {
+		if c.Azure.Storage.AccountName == "" {
 			return errors.New("azure storage account [name] is empty")
 		}
 
-		if s.Azure.Storage.AccountKey == "" {
+		if c.Azure.Storage.AccountKey == "" {
 			return errors.New("azure storage account [key] is empty")
 		}
 	}
 
 	{
-		if s.Azure.EventHub.NameSpace.AccountName == "" {
+		if c.Azure.EventHub.NameSpace.AccountName == "" {
 			return errors.New("azure storage account [name] is empty")
 		}
 
-		if s.Azure.EventHub.NameSpace.SharedAccessKey == "" {
+		if c.Azure.EventHub.NameSpace.SharedAccessKey == "" {
 			return errors.New("azure storage account [key] is empty")
 		}
 
-		if s.Azure.EventHub.NameSpace.ConnectionString == "" {
+		if c.Azure.EventHub.NameSpace.ConnectionString == "" {
 			return errors.New("azure storage account [connection string] is empty")
 		}
 	}
@@ -141,7 +131,7 @@ func (s *Config) Validate() error {
 	return nil
 }
 
-func (s *Config) defaultGlobalValue() error {
+func (c *Config) defaultGlobalValue() error {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -151,14 +141,9 @@ func (s *Config) defaultGlobalValue() error {
 		hostname = hostname[:len(hostname)-1]
 	}
 
-	return nil
-}
+	c.Hostname = hostname
 
-// setDefaultIfZero sets value to defaultVal if value is zero
-func setDefaultIfZero(value *int, defaultVal int) {
-	if *value <= 0 {
-		*value = defaultVal
-	}
+	return nil
 }
 
 func fileExists(filepath string) bool {

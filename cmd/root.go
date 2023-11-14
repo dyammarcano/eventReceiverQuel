@@ -5,6 +5,7 @@ import (
 	"fmt"
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
 	"github.com/dyammarcano/eventReceiverQuel/internal/azure_helper/event_hub"
+	"github.com/dyammarcano/eventReceiverQuel/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"log"
@@ -38,20 +39,37 @@ func init() {
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
-	rootCmd.Flags().StringVar(&consumerGroup, "consumer-group", "$Default", "consumer group to use")
-	rootCmd.Flags().StringVar(&partitionFlag, "partition-id", "", "partition to use")
-	rootCmd.Flags().StringVar(&strConnFlag, "connection-string", "", "connection string to event hub (SAS token)")
+	AddFlag(rootCmd, "config", "", "config file")
+}
+
+// AddFlag adds a flag to the service manager, it also binds the flag to the viper instance
+func AddFlag(cmd *cobra.Command, name string, defaultValue any, description string) {
+	switch v := defaultValue.(type) {
+	case bool:
+		cmd.PersistentFlags().Bool(name, v, description)
+	case string:
+		cmd.PersistentFlags().String(name, v, description)
+	case int, int8, int16, int32, int64:
+		cmd.PersistentFlags().Int64(name, v.(int64), description)
+	default:
+		fmt.Printf("Invalid type: %s\n", v)
+		os.Exit(1)
+	}
+
+	if err := viper.BindPFlag(name, cmd.PersistentFlags().Lookup(name)); err != nil {
+		cmd.Printf("Error binding flag: %s\n", err)
+		os.Exit(1)
+	}
 }
 
 func initConfig() {
-	viper.AddConfigPath(".")
-	viper.SetConfigName("app")
-	viper.SetConfigType("env")
-	viper.AutomaticEnv()
+	cfg := config.NewConfig()
 
-	if err := viper.ReadInConfig(); err != nil {
-		fmt.Fprintf(os.Stderr, "Environment variables not found in: %s\n", viper.ConfigFileUsed())
-	}
+	err := cfg.LoadConfigFile("C:\\arqprod_local\\cfg\\config.yaml")
+	cobra.CheckErr(err)
+
+	err = cfg.Validate()
+	cobra.CheckErr(err)
 }
 
 func runReceiver(cmd *cobra.Command, args []string) {
@@ -127,13 +145,13 @@ func runReceiver(cmd *cobra.Command, args []string) {
 }
 
 func message(ctx context.Context) {
-	config, ok := ctx.Value("azure").(event_hub.AzureCredentials)
+	azureCredentials, ok := ctx.Value("azure").(event_hub.AzureCredentials)
 	if !ok {
 		log.Println("error getting azureConfig from context")
 		os.Exit(1)
 	}
 
-	azure := event_hub.SplicConnectionString(*config.ConnectionString)
+	azure := event_hub.SplicConnectionString(*azureCredentials.ConnectionString)
 
 	log.Println("receiving events...")
 	fmt.Printf(`
