@@ -20,26 +20,14 @@ azure:
 
 ## Usage
 
-```bash
-go run main.go --connection-string "Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<key-name>;SharedAccessKey=<key>" --partition-id 0 --consumer-group "$Default"
-```
-
-## Build
-
 Windows
 
 ```bash
-go build -o .\hacks\bin\event-hub-receiver.exe .\hacks\receiver\receiver.go
+eventReceiverQuel.exe --config "path to config yaml"
 ```
 
 Linux
 
 ```bash
-go build -o ./hacks/bin/event-hub-receiver ./hacks/receiver/receiver.go
-```
-
-## Docker
-
-```bash
-docker build -t event-hub-reveiver .
+./eventReceiverQuel --config "path to config yaml"
 ```
