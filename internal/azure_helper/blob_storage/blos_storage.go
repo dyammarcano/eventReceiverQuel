@@ -3,13 +3,14 @@ package blob_storage
 import (
 	"context"
 	"fmt"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/dyammarcano/eventReceiverQuel/internal/azure_helper/event_hub"
-	"github.com/dyammarcano/eventReceiverQuel/internal/logger"
-
-	"go.uber.org/zap"
+	"log"
 	"os"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 //https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
@@ -42,12 +43,13 @@ type (
 func NewStorageClient(ctx context.Context) *StorageClient {
 	config, ok := ctx.Value("azure").(event_hub.AzureCredentials)
 	if !ok {
-		logger.Error("error getting azureConfig from context")
+		log.Println("error getting azureConfig from context")
 		os.Exit(1)
 	}
 
 	if config.Storage.AccountName == "" || config.Storage.AccountKey == "" {
-		panic("azure.storage.account_name or azure.storage.account_key not found")
+		log.Println("azure.storage.account_name or azure.storage.account_key not found")
+		os.Exit(1)
 	}
 
 	cred, err := azblob.NewSharedKeyCredential(config.Storage.AccountName, config.Storage.AccountKey)
@@ -75,7 +77,7 @@ func (s *StorageClient) UploadBlob(filePath string, blobName string, containerNa
 
 	defer func(file *os.File) {
 		if err := file.Close(); err != nil {
-			logger.Error("Error", zap.Any("msg", err))
+			log.Println("Error", zap.Any("msg", err))
 		}
 	}(file)
 
@@ -102,7 +104,7 @@ func (s *StorageClient) DownloadBlob(filePath string, blobName string, container
 
 	defer func(file *os.File) {
 		if err := file.Close(); err != nil {
-			logger.Error("Error", zap.Any("msg", err))
+			log.Println("Error", zap.Any("msg", err))
 		}
 	}(file)
 
