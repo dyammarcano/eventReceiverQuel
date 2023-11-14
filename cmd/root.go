@@ -103,13 +103,12 @@ func runReceiver(cmd *cobra.Command, _ []string) {
 		counter := 1
 		var msg string
 		for event := range chEvent {
-			msg = fmt.Sprintf("event received:\n>>\n%s\n<<", event.Data)
+			msg = fmt.Sprintf("event # %d\n>>\n%s\n<<", counter, event.Data)
 
 			if counterBool {
-				msg = fmt.Sprintf("event counted # %d\n<<", counter)
+				msg = fmt.Sprintf("event # %d\n", counter)
 				counter++
 			}
-
 			log.Println(msg)
 		}
 	}(chEvent)
