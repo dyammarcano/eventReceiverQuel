@@ -4,6 +4,20 @@
 
 This is a simple tool to receive messages from an event hub. It is intended to be used for testing purposes.
 
+
+## Template Config
+
+```yaml
+azure:
+  eventHub:
+    accountName:
+    accountKey:
+    topic:
+  storage:
+    accountKey:
+    accountName:
+```
+
 ## Usage
 
 ```bash

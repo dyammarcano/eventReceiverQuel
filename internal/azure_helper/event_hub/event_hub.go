@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/Azure/azure-event-hubs-go/v3"
+	"github.com/dyammarcano/eventReceiverQuel/internal/config"
 	"log"
 	"os"
-	"strings"
 	"sync"
 )
 
@@ -17,59 +17,12 @@ type (
 		*eventhub.Hub
 		context.Context
 	}
-
-	AzureCredentials struct {
-		EventHub         EventHub
-		Storage          Storage
-		ConnectionString *string
-	}
-
-	EventHub struct {
-		AccountName     string
-		SharedAccessKey string
-		TopicName       string
-		ConsumerGroup   string
-	}
-
-	Storage struct {
-		AccountName string
-		AccountKey  string
-	}
 )
 
-func SplicConnectionString(connectionString string) AzureCredentials {
-	var azure AzureCredentials
-
-	for _, v := range strings.Split(connectionString, ";") {
-		s := strings.Split(v, "=")
-
-		switch s[0] {
-		case "Endpoint":
-			azure.EventHub.AccountName = s[1]
-		case "SharedAccessKeyName":
-			azure.EventHub.SharedAccessKey = s[1]
-		case "EntityPath":
-			azure.EventHub.TopicName = s[1]
-		}
-	}
-
-	return azure
-}
-
 // NewHubClient Get a new client for event hub
-func NewHubClient(ctx context.Context) (*HubClient, error) {
-	config, ok := ctx.Value("azure").(AzureCredentials)
-	if !ok {
-		log.Println("error getting azureConfig from context")
-		os.Exit(1)
-	}
-
-	if config.ConnectionString != nil {
-		return newHubClientSAS(ctx, *config.ConnectionString)
-	}
-
+func NewHubClient(ctx context.Context, config *config.Config) (*HubClient, error) {
 	connStr := fmt.Sprintf("Endpoint=sb://%s.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=%s;EntityPath=%s",
-		config.EventHub.AccountName, config.EventHub.SharedAccessKey, config.EventHub.TopicName)
+		config.EventHub.AccountName, config.EventHub.AccountKey, config.EventHub.Topic)
 
 	return newHubClientSAS(ctx, connStr)
 }
@@ -158,15 +111,13 @@ func (h *HubClient) ReceiveEventChannel() (events <-chan *eventhub.Event) {
 		return nil
 	}
 
-	consumerGroup := h.Context.Value("azure").(AzureCredentials).EventHub.ConsumerGroup
-
 	for _, partitionID := range runtimeInfo.PartitionIDs {
 		wg.Add(1)
 
 		go func(partitionID string) {
 			defer wg.Done()
 
-			listenerHandle, err := h.Hub.Receive(h.Context, partitionID, handler, eventhub.ReceiveWithConsumerGroup(consumerGroup), eventhub.ReceiveWithLatestOffset())
+			listenerHandle, err := h.Hub.Receive(h.Context, partitionID, handler, eventhub.ReceiveWithConsumerGroup("$Default"), eventhub.ReceiveWithLatestOffset())
 
 			if err != nil {
 				log.Printf("failed to start listener for partition %s: %v", partitionID, err)
