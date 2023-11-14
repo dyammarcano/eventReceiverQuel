@@ -76,7 +76,7 @@ func initConfig() {
 	cobra.CheckErr(err)
 }
 
-func runReceiver(cmd *cobra.Command, args []string) {
+func runReceiver(cmd *cobra.Command, _ []string) {
 	clientHub, err := event_hub.NewHubClient(cmd.Context(), cfg)
 	if err != nil {
 		log.Printf("error getting event hub client: %s", err.Error())

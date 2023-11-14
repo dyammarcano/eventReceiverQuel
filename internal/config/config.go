@@ -18,13 +18,22 @@ const (
 )
 
 type (
+	//azure:
+	//	eventHub:
+	//	eventHub: eventHub
+	//	accountName: accountName
+	//	accountKey: accountKey
+	//	topic: topic
+	//	consumerGroup: consumerGroup
+
 	Config struct {
 		Hostname string `json:"-" mapstructure:"-" yaml:"-"`
 		EventHub struct {
-			AccountName string `json:"accountName" mapstructure:"accountName" yaml:"accountName"`
-			AccountKey  string `json:"accountKey" mapstructure:"accountKey" yaml:"accountKey"`
-			Topic       string `json:"topic" mapstructure:"topic" yaml:"topic"`
-		}
+			AccountName   string `json:"accountName" mapstructure:"accountName" yaml:"accountName"`
+			AccountKey    string `json:"accountKey" mapstructure:"accountKey" yaml:"accountKey"`
+			Topic         string `json:"topic" mapstructure:"topic" yaml:"topic"`
+			ConsumerGroup string `json:"consumerGroup" mapstructure:"consumerGroup" yaml:"consumerGroup"`
+		} `json:"eventHub" mapstructure:"eventHub" yaml:"eventHub"`
 	}
 )
 
@@ -79,18 +88,16 @@ func (c *Config) isSupportedFileExtension(filePath string) bool {
 }
 
 func (c *Config) Validate() error {
-	{
-		if c.EventHub.AccountName == "" {
-			return errors.New("azure storage account [name] is empty")
-		}
+	if c.EventHub.AccountName == "" {
+		return errors.New("event hub account [name] is empty")
+	}
 
-		if c.EventHub.AccountKey == "" {
-			return errors.New("azure storage account [key] is empty")
-		}
+	if c.EventHub.AccountKey == "" {
+		return errors.New("event hub account [key] is empty")
+	}
 
-		if c.EventHub.Topic == "" {
-			return errors.New("azure storage account [connection string] is empty")
-		}
+	if c.EventHub.Topic == "" {
+		return errors.New("event hub [topic] is empty")
 	}
 
 	return nil

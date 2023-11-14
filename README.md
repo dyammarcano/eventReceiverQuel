@@ -8,14 +8,11 @@ This is a simple tool to receive messages from an event hub. It is intended to b
 ## Template Config
 
 ```yaml
-azure:
-  eventHub:
-    accountName:
-    accountKey:
-    topic:
-  storage:
-    accountKey:
-    accountName:
+eventHub:
+  topic:
+  accountName:
+  accountKey:
+  consumerGroup:
 ```
 
 ## Usage
