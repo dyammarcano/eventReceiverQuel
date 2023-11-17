@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	eventhub "github.com/Azure/azure-event-hubs-go/v3"
+	"github.com/caarlos0/log"
 	"github.com/dyammarcano/eventReceiverQuel/internal/azure_helper/event_hub"
+	cmd2 "github.com/dyammarcano/eventReceiverQuel/internal/cmd"
 	"github.com/dyammarcano/eventReceiverQuel/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -33,6 +34,7 @@ func Execute() {
 }
 
 func init() {
+	log.SetLevel(log.DebugLevel)
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
@@ -51,12 +53,11 @@ func AddFlag(cmd *cobra.Command, name string, defaultValue any, description stri
 	case int, int8, int16, int32, int64:
 		cmd.PersistentFlags().Int64(name, v.(int64), description)
 	default:
-		fmt.Printf("Invalid type: %s\n", v)
-		os.Exit(1)
+		log.Fatalf("invalid type: %s\n", v)
 	}
 
 	if err := viper.BindPFlag(name, cmd.PersistentFlags().Lookup(name)); err != nil {
-		cmd.Printf("Error binding flag: %s\n", err)
+		cmd.Printf("error binding flag: %s\n", err)
 		os.Exit(1)
 	}
 }
@@ -66,7 +67,7 @@ func initConfig() {
 
 	filePath := viper.GetString("config")
 	if filePath == "" {
-		log.Println("Error config file flag is not present")
+		log.Fatal("error config file flag is not present")
 		os.Exit(1)
 	}
 
@@ -78,15 +79,15 @@ func initConfig() {
 }
 
 func runReceiver(cmd *cobra.Command, _ []string) {
+
 	clientHub, err := event_hub.NewHubClient(cmd.Context(), cfg)
 	if err != nil {
-		log.Printf("error getting event hub client: %s", err.Error())
-		os.Exit(1)
+		log.Fatalf("error getting event hub client: %s", err.Error())
 	}
 
 	defer func(Hub *eventhub.Hub, ctx context.Context) {
 		if err := Hub.Close(ctx); err != nil {
-			log.Printf("error closing event hub client: %s", err.Error())
+			log.Fatalf("error closing event hub client: %s", err.Error())
 		}
 	}(clientHub.Hub, clientHub.Context)
 
@@ -95,35 +96,42 @@ func runReceiver(cmd *cobra.Command, _ []string) {
 
 	chEvent := clientHub.ReceiveEventChannel()
 
-	message(cfg)
+	message(cmd, cfg)
 
 	counterBool := viper.GetBool("count")
 
+	var newCounterSvc *cmd2.CounterSvc
+
+	if counterBool {
+		newCounterSvc = cmd2.NewCounterSvc()
+		go newCounterSvc.Start()
+	}
+
 	go func(chEvent <-chan *eventhub.Event) {
 		counter := 1
-		var msg string
 		for event := range chEvent {
-			msg = fmt.Sprintf("event # %d\n>>\n%s\n<<", counter, event.Data)
-
-			if counterBool {
-				msg = fmt.Sprintf("event # %d\n", counter)
-				counter++
+			if !counterBool {
+				log.Infof("event # %d\n>>\n%s<<", counter, event.Data)
+				return
 			}
-			log.Println(msg)
+			newCounterSvc.CountEvent()
+			counter++
 		}
 	}(chEvent)
 
 	<-sigCh // Wait for a termination signal
-	log.Println("received termination signal, shutting down gracefully...")
+	log.Info("received termination signal, shutting down gracefully...")
 	os.Exit(0)
 }
 
-func message(config *config.Config) {
-	log.Println("receiving events...")
-	fmt.Printf(`
-Endpoint=sb://%s.servicebus.windows.net;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=*******;EntityPath=%s
+func message(cmd *cobra.Command, config *config.Config) {
+	// clean console
+	fmt.Fprintf(cmd.OutOrStdout(), "\033[H\033[2J")
+
+	cmd.Printf(`
+Endpoint=sb://%s.servicebus.windows.net;SharedAccessKey=*******;EntityPath=%s
 
 press CTRL+C to stop receiving events and exit
 
-`, config.EventHub.Topic, config.EventHub.AccountName)
+`, config.EventHub.AccountName, config.EventHub.Topic)
 }

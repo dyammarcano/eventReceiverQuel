@@ -20,11 +20,19 @@ eventHub:
 Windows
 
 ```bash
+# print and count events
 eventReceiverQuel.exe --config "path to config yaml"
+
+# only count events
+eventReceiverQuel.exe --config "path to config yaml" --count
 ```
 
 Linux
 
 ```bash
+# print and count events
 ./eventReceiverQuel --config "path to config yaml"
+
+# only count events
+./eventReceiverQuel --config "path to config yaml" --count
 ```
